@@ -13,9 +13,9 @@ public class App
 {
     public static void main( String[] args ) throws InterruptedException, ParseException {
         var options = new Options();
-        options.addOption("c","Concurrency");
-        options.addOption("e","Executions");
-        options.addOption("p","Pool size");
+        options.addOption("c", true,"Concurrency");
+        options.addOption("e",true,"Executions");
+        options.addOption("p",true,"Pool size");
         var res = new DefaultParser().parse(options,args);
         var executions = res.getOptionValue("e", "100000");
         var concurrency = res.getOptionValue("c", "100");
