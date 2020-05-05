@@ -26,6 +26,11 @@
       <artifactId>r2dbc-pool</artifactId>
       <version>0.8.2.RELEASE</version>
     </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-simple</artifactId>
+      <version>1.7.25</version>
+    </dependency>
   </dependencies>
   <build>
     <plugins>
