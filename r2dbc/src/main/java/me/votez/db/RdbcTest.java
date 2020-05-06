@@ -39,6 +39,7 @@ public class RdbcTest {
                 .option(USER, user)
                 .option(PASSWORD, password)
                 .option(DATABASE, "postgres")  // optional
+                .option(SSL, false)  // optional
 //                .option(OPTIONS, options) // optional
                 .build());
         ConnectionPoolConfiguration configuration = ConnectionPoolConfiguration.builder(connectionFactory)
@@ -47,10 +48,11 @@ public class RdbcTest {
                 .build();
 
         ConnectionPool pool = new ConnectionPool(configuration);
+        int chunk = executions / 10;
         LOGGER.info("Go R2DBC");
         Flux.range(1, executions)
                 .doOnNext(i -> {
-                    if (i % 100 == 0) LOGGER.info("Processing {}", i);
+                    if (i % chunk == 0) LOGGER.info("Processing {}", i);
                 })
                 .flatMap(Mono::just)
                 .flatMap(i -> pool.create(), concurrency)
@@ -78,7 +80,8 @@ public class RdbcTest {
 //                .subscribe(System.out::println, Throwable::printStackTrace);
                 .blockLast();
         Thread.sleep(10_000);
-        System.out.println("Done with R2DBC");
+        LOGGER.info("Done with R2DBC");
         pool.close();
+        LOGGER.info("Pool is down");
     }
 }

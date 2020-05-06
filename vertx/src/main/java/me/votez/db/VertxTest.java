@@ -33,6 +33,9 @@ public class VertxTest {
                 .setPort(5432)
                 .setHost(host)
                 .setDatabase("postgres")
+                .setCachePreparedStatements(true)
+                .setPreparedStatementCacheMaxSize(1000)
+                .setSsl(false)
                 .setUser(user)
                 .setPassword(password);
 
@@ -43,9 +46,10 @@ public class VertxTest {
 // Create the client pool
         PgPool client = PgPool.pool(connectOptions, poolOptions);
 
+        int chunk = executions / 10;
         LOGGER.info("Go Vert.X");
         Flowable.range(1, executions)
-                .doOnNext(i -> {if (i % 100 == 0) LOGGER.info("Process {}", i);})
+                .doOnNext(i -> {if (i % chunk == 0) LOGGER.info("Process {}", i);})
                 .flatMap( i-> client.preparedQuery(
                         "SELECT pg_sleep(0.1), title FROM nicer_but_slower_film_list WHERE FID = $1")
 //                        "SELECT * FROM nicer_but_slower_film_list WHERE actors @@ to_tsquery($1)")
@@ -57,7 +61,7 @@ public class VertxTest {
                 .subscribeOn(Schedulers.computation()),
         false, concurrency)
 //                    return  client.preparedQuery("SELECT title FROM nicer_but_slower_film_list WHERE FID = $1").rxExecute(Tuple.of(random.nextInt(990)));
-                .blockingSubscribe(unused -> {}, Throwable::printStackTrace, client::close);
+                .blockingSubscribe(unused -> {}, Throwable::printStackTrace);
 
 /*
         Flowable.range(1, 1_000_000)
@@ -81,5 +85,7 @@ public class VertxTest {
 */
 
         LOGGER.info("Done with VertX");
+        client.close();
+        LOGGER.info("Pool is down");
     }
 }
