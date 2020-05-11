@@ -2,13 +2,10 @@ package me.votez.db;
 
 import io.r2dbc.pool.ConnectionPool;
 import io.r2dbc.pool.ConnectionPoolConfiguration;
-import io.r2dbc.spi.ConnectionFactories;
-import io.r2dbc.spi.ConnectionFactory;
-import io.r2dbc.spi.ConnectionFactoryOptions;
+import io.r2dbc.spi.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
 import java.time.Duration;
@@ -49,39 +46,40 @@ public class RdbcTest {
 
         ConnectionPool pool = new ConnectionPool(configuration);
         int chunk = executions / 10;
+
+        Flux<String> titles = Flux.usingWhen(pool.create(), connection ->
+                        Flux.from(
+                                connection.createStatement("SELECT title FROM nicer_but_slower_film_list WHERE FID = $1")
+                                        .bind("$1", Math.abs(random.nextInt(990)))
+                                        .execute()
+                        ).flatMap(result -> result.map(RdbcTest::getTitle))
+                , Connection::close);
+        titles
+                .doOnNext(LOGGER::info)
+                .blockLast();
+
         LOGGER.info("Go R2DBC");
         Flux.range(1, executions)
-                .doOnNext(i -> {
-                    if (i % chunk == 0) LOGGER.info("Processing {}", i);
-                })
-                .flatMap(Mono::just)
-                .flatMap(i -> pool.create(), concurrency)
-//                .doOnNext(unused -> System.out.println("Connection created"))
-                .doOnError(Throwable::printStackTrace)
-                .flatMap(
-                        connection ->
-                                Mono.from(connection.createStatement(
-                                        "SELECT pg_sleep(0.1), title FROM nicer_but_slower_film_list WHERE FID = $1"
-//                                        "SELECT * FROM nicer_but_slower_film_list WHERE actors @@ to_tsquery($1)"
-                                )
-//                                        .bind("$1", "BetteNicholson&WarrenNolte")
+                .doOnNext(i -> {  if (i % chunk == 0) LOGGER.info("Processing {}", i);})
+                .flatMap(i -> Flux.usingWhen(pool.create(),
+                        connection -> Flux.from(
+                                connection.createStatement("SELECT title FROM nicer_but_slower_film_list WHERE FID = $1")
                                         .bind("$1", Math.abs(random.nextInt(990)))
-                                        .execute())
-                                        .doOnError(Throwable::printStackTrace)
-                                        .flatMapMany(result -> Flux.from(result.map((row, metadata) -> row.get("TITLE", String.class).length())))
-                                        .doOnError(Throwable::printStackTrace)
-//                                        .doOnNext(System.out::println)
-                                        .then(Mono.from(connection.close()))
-                                        .thenReturn("Good")
-                )
-                .subscribeOn(Schedulers.parallel())
-                .publishOn(Schedulers.parallel())
+                                        .execute()
+                        )
+                                .flatMap(result -> Flux.from(result.map(RdbcTest::getTitle))),
+                        Connection::close)
+                                .subscribeOn(Schedulers.parallel())
+                                .doOnError(Throwable::printStackTrace)
+                        , concurrency)
                 .doOnError(Throwable::printStackTrace)
-//                .subscribe(System.out::println, Throwable::printStackTrace);
+                .doOnComplete(() -> LOGGER.info("Done with R2DBC"))
                 .blockLast();
-        Thread.sleep(10_000);
-        LOGGER.info("Done with R2DBC");
         pool.close();
         LOGGER.info("Pool is down");
+    }
+
+    private static String getTitle(Row row, RowMetadata meta) {
+        return row.get("title", String.class);
     }
 }

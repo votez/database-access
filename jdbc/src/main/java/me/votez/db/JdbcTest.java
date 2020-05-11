@@ -55,8 +55,8 @@ public class JdbcTest {
                 )
                 .subscribeOn(Schedulers.elastic())
                 .doOnError(Throwable::printStackTrace)
+                .doOnComplete( ()->LOGGER.info("Done with JDBC"))
                 .blockLast();
-        LOGGER.info("Done with JDBC");
         ds.close();
         LOGGER.info("Pool is down");
 
@@ -66,10 +66,8 @@ public class JdbcTest {
     private Integer request(Connection connection) {
         try {
             var s = connection.prepareStatement(
-                    "SELECT pg_sleep(0.1), title FROM nicer_but_slower_film_list WHERE FID = ?"
-//                                        "SELECT * FROM nicer_but_slower_film_list WHERE actors @@ to_tsquery(?)"
+                    "SELECT title FROM nicer_but_slower_film_list WHERE FID = ?"
             );
-//                                s.setString(1, "BetteNicholson&WarrenNolte");
             s.setInt(1, Math.abs(random.nextInt(990)));
             var results = s.executeQuery();
             int counter = 0;
