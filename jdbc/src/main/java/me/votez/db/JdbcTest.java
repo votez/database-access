@@ -28,7 +28,7 @@ public class JdbcTest {
 
     public void test(int concurrency, int executions, int poolSize) throws InterruptedException, SQLException {
         HikariConfig config = new HikariConfig();
-        config.setJdbcUrl("jdbc:postgresql://" + host + "/postgres?ssl=false");
+        config.setJdbcUrl("jdbc:postgresql://" + host + "/postgres?sslmode=disable");   // ssl is disabled by default anyway
         config.setUsername(user);
         config.setPassword(password);
         config.addDataSourceProperty("cachePrepStmts", "true");
