@@ -28,7 +28,7 @@ public class JdbcTest {
 
     public void test(int concurrency, int executions, int poolSize) throws InterruptedException, SQLException {
         HikariConfig config = new HikariConfig();
-        config.setJdbcUrl("jdbc:postgresql://" + host + "/postgres");
+        config.setJdbcUrl("jdbc:postgresql://" + host + "/postgres?ssl=false");
         config.setUsername(user);
         config.setPassword(password);
         config.addDataSourceProperty("cachePrepStmts", "true");
@@ -36,7 +36,6 @@ public class JdbcTest {
         config.addDataSourceProperty("prepStmtCacheSqlLimit", "2048");
         config.setMaximumPoolSize(poolSize);
         config.setConnectionTimeout(180_000);
-        config.setAutoCommit(false);
         config.setInitializationFailTimeout(180_000);
         config.setIsolateInternalQueries(false);
 
